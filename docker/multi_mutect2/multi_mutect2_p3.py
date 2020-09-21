@@ -196,7 +196,7 @@ def get_args():
 
 def main(args, logger):
     """main"""
-    logger.info("Running GATK3.6 MuTect2")
+    logger.info("Running GATK3.7 MuTect2")
     kwargs = vars(args)
     kwargs["gatk_path"] = "/usr/local/bin/GenomeAnalysisTK.jar"
 
