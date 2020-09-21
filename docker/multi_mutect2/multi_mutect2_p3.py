@@ -1,27 +1,26 @@
-"""
-Multithreading MuTect2
-@author: Shenglai Li
+#!/opt/conda/bin/python3
+"""Multithreading MuTect2
+@author: Shenglai Li, Marc Saric
 """
 
-import os
-import sys
-import time
-import glob
-import shlex
-import ctypes
-import string
-import logging
 import argparse
-import threading
+import ctypes
+import glob
+import logging
+import os
+import shlex
+import string
 import subprocess
-from signal import SIGKILL
-from functools import partial
+import sys
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+from signal import SIGKILL
 
 
 def setup_logger():
-    """
-    Sets up the logger.
+    """Set up us the logger.
     """
     logger = logging.getLogger("multi_mutect2")
     logger_format = "[%(levelname)s] [%(asctime)s] [%(name)s] - %(message)s"
@@ -34,13 +33,12 @@ def setup_logger():
 
 
 def subprocess_commands_pipe(cmd, logger, shell_var=False, lock=threading.Lock()):
-    """run pool commands"""
+    """Run pool commands"""
     libc = ctypes.CDLL("libc.so.6")
     pr_set_pdeathsig = ctypes.c_int(1)
 
     def child_preexec_set_pdeathsig():
-        """
-        preexec_fn argument for subprocess.Popen,
+        """preexec_fn argument for subprocess.Popen,
         it will send a SIGKILL to the child once the parent exits
         """
 
@@ -71,8 +69,9 @@ def subprocess_commands_pipe(cmd, logger, shell_var=False, lock=threading.Lock()
             logger.info(output_stdout.decode("UTF-8"))
             logger.info(output_stderr.decode("UTF-8"))
 
+
 def tpe_submit_commands(cmds, thread_count, logger, shell_var=False):
-    """run commands on number of threads"""
+    """Run commands on number of threads"""
     with ThreadPoolExecutor(max_workers=thread_count) as e:
         for cmd in cmds:
             e.submit(
@@ -82,7 +81,7 @@ def tpe_submit_commands(cmds, thread_count, logger, shell_var=False):
 
 
 def get_region(intervals):
-    """get region from intervals"""
+    """Get region from intervals"""
     interval_list = []
     with open(intervals, "r") as fh:
         line = fh.readlines()
@@ -94,7 +93,7 @@ def get_region(intervals):
 
 
 def get_file_size(filename):
-    """ Gets file size """
+    """Gets file size """
     fstats = os.stat(filename)
     return fstats.st_size
 
@@ -102,7 +101,7 @@ def get_file_size(filename):
 def cmd_template(dct):
     """cmd template"""
     lst = [
-        "java",
+        "/usr/bin/java",
         "-Djava.io.tmpdir=/tmp/job_tmp_${BLOCK_NUM}",
         "-d64",
         "-jar",
@@ -160,67 +159,26 @@ def cmd_template(dct):
 
 
 def get_args():
-    """
-    Loads the parser.
+    """Loads the parser.
     """
     # Main parser
     parser = argparse.ArgumentParser("Internal multithreading MuTect2 calling.")
     # Required flags.
+    parser.add_argument("-j", "--java_heap", required=True, help="Java heap memory.")
+    parser.add_argument("-f", "--reference_path", required=True, help="Reference path.")
     parser.add_argument(
-        "-j",
-        "--java_heap",
-        required=True,
-        help="Java heap memory."
+        "-r", "--interval_bed_path", required=True, help="Interval bed file."
+    )
+    parser.add_argument("-t", "--tumor_bam", required=True, help="Tumor bam file.")
+    parser.add_argument("-n", "--normal_bam", required=True, help="Normal bam file.")
+    parser.add_argument(
+        "-c", "--thread_count", type=int, required=True, help="Number of thread."
     )
     parser.add_argument(
-        "-f",
-        "--reference_path",
-        required=True,
-        help="Reference path."
+        "-p", "--pon", required=True, help="Panel of normals reference path."
     )
-    parser.add_argument(
-        "-r",
-        "--interval_bed_path",
-        required=True,
-        help="Interval bed file."
-    )
-    parser.add_argument(
-        "-t",
-        "--tumor_bam",
-        required=True,
-        help="Tumor bam file."
-    )
-    parser.add_argument(
-        "-n",
-        "--normal_bam",
-        required=True,
-        help="Normal bam file."
-    )
-    parser.add_argument(
-        "-c",
-        "--thread_count",
-        type=int,
-        required=True,
-        help="Number of thread."
-    )
-    parser.add_argument(
-        "-p",
-        "--pon",
-        required=True,
-        help="Panel of normals reference path."
-    )
-    parser.add_argument(
-        "-s",
-        "--cosmic",
-        required=True,
-        help="Cosmic reference path."
-    )
-    parser.add_argument(
-        "-d",
-        "--dbsnp",
-        required=True,
-        help="dbSNP reference path."
-    )
+    parser.add_argument("-s", "--cosmic", required=True, help="Cosmic reference path.")
+    parser.add_argument("-d", "--dbsnp", required=True, help="dbSNP reference path.")
     parser.add_argument(
         "-e",
         "--contest",
@@ -240,7 +198,7 @@ def main(args, logger):
     """main"""
     logger.info("Running GATK3.6 MuTect2")
     kwargs = vars(args)
-    kwargs["gatk_path"] = "/opt/GenomeAnalysisTK.jar"
+    kwargs["gatk_path"] = "/usr/local/bin/GenomeAnalysisTK.jar"
 
     # Start Queue
     tpe_submit_commands(list(cmd_template(kwargs)), kwargs["thread_count"], logger)
